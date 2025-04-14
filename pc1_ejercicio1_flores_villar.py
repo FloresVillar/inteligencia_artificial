@@ -31,7 +31,35 @@ class Descifrado(Problema):
 		if self.fragmento_conocido in texto_descifrado:
 			return True
 		return False
-
+	def aplicar_mapeo(self,estado): #estado => mapeo(asignacion)estado = {'J': 'H', 'V': 'O', 'Q': 'A'}
+		resultado = ""
+		for l in self.texto_cifrado:
+			if l in mapeo:
+				resultado+=estado[l]
+			else:
+				resultado+="_"
+		return resultado
+	def acciones(self,estado):
+		alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		letras_asignadas = set(estado.values())
+		letras_no_asignadas = set(alfabeto) - letras_asignadas
+		acciones = []
+		for l_cifrada in set(self.texto_cifrado)-set(estado.keys()):
+			for l_plana in letras_no_asignadas:
+				acciones.append((l_cifrada,l_plana))
+		return acciones
+	def resultado(self,estado,accion):
+		nuevo_estado = estado.copy()
+		l_cifrada, l_plana = accion
+		nuevo_estado [l_cifrada] = l_plana
+		return nuevo_estado
+	def valor(self,estado):
+		texto_descifrado = self.aplicar_mapeo(estado)
+		concidencias = 0
+		for i,l in enumerate(texto_descifrado):
+			if l ==self.fragmento_conocido[i]:
+				coincidencias+=1
+		return coincidencias
 class Nodo:
 	def __init__(self,estado,padre =None,accion =None,costo_camino =0):
 		self.estado = estado
@@ -71,3 +99,24 @@ class Nodo:
 		return isinstance(otro,Nodo) and self.estado == otro.estado
 	def __hash__(self):
 		return hash(self.estado) #n1=Nodo("A") n2=Nodo("A") conjunto=set() conjunto.add(n1) n2 in conjunto ===> true
+
+def IDS(problema):
+	limite = 0
+	while True:
+		resultado = busqueda_profundidad_limitada(Nodo(problema.inicial),problema,limite)
+		if resultado is not None:
+			return resultado
+		limite+=1
+
+def busqueda_profundidad_limitada(nodo,problema,limite):
+	if problema.is_goal(nodo.estado):
+		return nodo
+	elif nodo.profundidad == limite:
+		return None
+	else:
+		for hijo in nodo.expandir(problema):
+			resultado = busqueda_profundidad_limitada(hijo,problema,limite)
+			if resultado is not None:
+				return resultado
+	return None
+
