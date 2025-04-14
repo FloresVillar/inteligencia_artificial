@@ -37,7 +37,14 @@ class Reconfiguracion(Problema):
 		for servicio,servidor_actual in estado.items(): #s=servicio, S=servidor
 			for servidor_destino in self.capacidades:
 				if servidor_destino != servidor_actual:
-					if self.capacidad_disponible(estado,servidor_destino)>0:
+					valido = True
+					for restriccion in self.restricciones:
+						tipo, s1, s2 = restriccion
+						if tipo =='no_juntos' and s1==servicio and s2 in estado and estado[s2]==servidor_destino:
+							valido = False
+						elif tipo=='juntos' and s1 == servicio and s2 in estado and estado[s2] != servidor_destino:
+							valido = False
+					if valido and self.capacidad_disponible(estado,servidor_destino)>0:
 						acciones.append((servicio,servidor_destino))
 		return acciones
 	def resultado(self,estado,accion): 
@@ -112,3 +119,35 @@ class Nodo:
                 return isinstance(otro,Nodo) and self.estado == otro.estado
         def __hash__(self):
                 return hash(self.estado) #n1=Nodo("A") n2=Nodo("A") conjunto=set() conjunto.add(n1) n2 in conjunto ===> true
+
+def breadth_first_graph_search(problema):
+	nodo_inicial =Nodo(problema.inicial)
+	if problema.goal_test(nodo_inicial.estado):
+		return nodo_inicial
+	frontera = deque([nodo_inicial])
+	explorados = set()
+	while frontera:
+		nodo = frontera.popleft()
+		print(f"estado: {nodo.estado}")
+		explorados.add(frozenset(nodo.estado.items()))
+		for hijo in nodo.expandir(problema):
+			print(f"hijos: {hijo.estado}")
+			if frozenset(hijo.estado.items()) not in explorados and hijo not in frontera:
+				if problema.goal_test(hijo.estado):
+					return hijo
+				frontera.append(hijo)
+	return None
+
+if __name__=='__main__':
+	estado_inicial = {'A':'s1','B':'s1','C':'s2','D':'s1','E':'s3','F':'s3','G':'s2'}
+	objetivo_base = {'A':'s1','B':'s2'}
+	capacidades = {'s1':3,'s2':3,'s3':3}
+	restricciones = [('no_juntos','D','E'),('juntos','F','G')]
+	problema = Reconfiguracion(estado_inicial,objetivo_base,capacidades,restricciones)
+	objetivo = breadth_first_graph_search(problema)
+	if objetivo:
+		print("solucion")
+		for accion in objetivo.solucion():
+			print(accion)
+	else:
+		print("no hay solucion") 
