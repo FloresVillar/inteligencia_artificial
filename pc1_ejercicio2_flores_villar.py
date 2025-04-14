@@ -80,6 +80,20 @@ class Reconfiguracion(Problema):
 		for servidor, capacidad in self.capacidades.items():
 			if self.conteo_servidor(estado,servidor)>capacidad:
 				return False
+	def es_valido(self,estado):
+		for restriccion in self.restricciones:
+			tipo, s1, s2 = restriccion
+			if tipo == 'no juntos':
+				if estado.get(s1)==estado.get(s2):
+					return False
+				elif tipo == 'juntos':
+					if estado.get(s1)!=estado.get(s2):
+						return False
+		for servidor, capacidad in self.capacidades.items():
+			if self.conteo_servidor(estado,servidor)>capacidad:
+				return False
+		return self.goal_test(estado)
+
 class Nodo:
         def __init__(self,estado,padre =None,accion =None,costo_camino =0):
                 self.estado = estado
@@ -94,11 +108,14 @@ class Nodo:
         def __lt__(self,nodo):
                 return self.estado < nodo.estado
         def expandir(self, problema):
-                lista = []
-                for accion in problema.acciones(self.estado):
-                        hijo = self.nodo_hijo(problema,accion)
-                        lista.append(hijo)
-                return lista
+        	lista = []
+        	for accion in problema.acciones(self.estado):
+                siguiente_estado = problema.resultado(self.estado,accion)
+			    if not problema.es_valido(siguiente_estado):
+				    continue
+			    hijo = self.nodo_hijo(problema,accion)
+			    lista.append(hijo)
+		    return lista
         def nodo_hijo(self,problema,accion):
                 siguiente_estado = problema.resultado(self.estado,accion)
                 siguiente_nodo = Nodo(siguiente_estado,self,accion,problema.costo_accion(self.costo_camino,self.estado,accion,siguiente_estado))
