@@ -165,12 +165,11 @@ if __name__=='__main__':
     objetivo = breadth_first_graph_search(problema)
     camino = objetivo.camino()
     print("\n")
-    for paso in camino:
-        print(f"{paso.estado}--{paso.accion}-->")
     if objetivo:
         print("solucion")
         for accion in objetivo.solucion():
             print(accion)
+        print(f"objetivo:{objetivo.estado}")
     else:
         print("no hay solucion") 
     
