@@ -26,15 +26,15 @@ class Descifrado(Problema):
 		self.texto_cifrado = texto_cifrado #Jvsq, Mti, Xlmz.
 		self.fragmento_conocido = fragmento_conocido # 'hola' aparece en el texto
 		self.diccionario = diccionario #['Hola', 'Mundo', 'Cifrado', 'Texto']
-	def is_goal(self,mapeo):
-		texto_descifrado = self.aplicar_mapeo(mapeo)
+	def is_goal(self,estado):
+		texto_descifrado = self.aplicar_mapeo(estado)
 		if self.fragmento_conocido in texto_descifrado:
 			return True
 		return False
 	def aplicar_mapeo(self,estado): #estado => mapeo(asignacion)estado = {'J': 'H', 'V': 'O', 'Q': 'A'}
 		resultado = ""
 		for l in self.texto_cifrado:
-			if l in mapeo:
+			if l in estado:
 				resultado+=estado[l]
 			else:
 				resultado+="_"
@@ -120,3 +120,15 @@ def busqueda_profundidad_limitada(nodo,problema,limite):
 				return resultado
 	return None
 
+if __name__=='__main__':
+	texto_cifrado= "XLMZ"
+	fragmento_conocido = "HOLA"
+	diccionario= ["DOLAR","MIA","TOLUCA","CIFRA"]
+	problema = Descifrado(texto_cifrado=texto_cifrado,fragmento_conocido=fragmento_conocido,diccionario=diccionario,inicial = {})
+	solucion = IDS(problema)
+	if solucion:
+		print("solucion:")
+		print("texto descifrado:",problema.aplicar_mapeo(solucion.estado))
+		print("camino de acciones",solucion.solucion())
+	else:
+		print("no hay solucion")
