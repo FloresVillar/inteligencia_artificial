@@ -282,7 +282,7 @@ def bfs_aima(problema):
 				frontera.append(hijo)
 	return falla
 
-class OchoReinas(Problema):
+class OchoPuzzles(Problema):
 	def __init__(self,inicial,final=(1,2,3,4,5,6,7,8,0)):
 		self.inicial = inicial 
 		self.final = final
@@ -328,13 +328,39 @@ class OchoReinas(Problema):
 			if estado[i]!=self.final[i]:
 				cuenta +=1
 		return cuenta
-	
+
+class Panqueques(Problema):
+	def __init__(self,inicial):
+		self.inicial = tuple(inicial)
+		self.final = tuple(sorted(inicial))
+	def acciones(self,estado):
+		n_volteo = range(2,len(estado)+1)
+		return n_volteo
+	def resultado(self,estado,accion):
+		n = accion
+		tmp_estado = estado[0:n]
+		tmp_estado = tuple(reversed(tmp_estado))
+		nuevo_estado = tmp_estado + estado[n:]
+		return nuevo_estado
+	def h(self,nodo):
+		cuenta = 0
+		estado = nodo.estado
+		for i in range(1,len(estado)):
+			if (estado[i-1] - estado[i])> 1:
+				cuenta=+1
+		return cuenta
+
 if __name__=='__main__':
-	problema = OchoReinas((5,7,0,1,4,3,8,2,6),(1,2,3,4,5,6,7,8,0))
+	problema = Panqueques((1, 3, 5, 7, 9, 2, 4, 6, 8))
+	print(problema.inicial)
+	resultado = a_estrella(problema)
+	print(resultado)
+	"""OchoPuzzles
+	problema = OchoPuzzles((5,7,0,1,4,3,8,2,6),(1,2,3,4,5,6,7,8,0))
 	if problema.es_soluble(problema.inicial):
 		resultado = a_estrella(problema)
 	if resultado!=falla:
-		print(resultado.estado)
+		print(resultado.estado)"""
 	""" #sustitucion monoalfabetica
 	texto_cifrado= "XMZV"
 	fragmento_conocido = "HOLA"
