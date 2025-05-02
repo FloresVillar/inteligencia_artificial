@@ -1,3 +1,4 @@
+
 import sys
 from collections import deque;
 
@@ -37,7 +38,7 @@ class Descifrado(Problema):
 			if l in estado:
 				resultado+=estado[l]
 			else:
-				resultado+="_"
+                		resultado+="_"
 		return resultado
 	def acciones(self,estado):
 		alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -60,6 +61,13 @@ class Descifrado(Problema):
 			if l ==self.fragmento_conocido[i]:
 				coincidencias+=1
 		return coincidencias
+	def h(self,estado):
+		texto_descifrado = self.aplicar_mapeo(estado)
+		coincidencias = 0
+		for i,l in enumerate(texto_descifrado):
+			if l==self.fragmento_conocido([i]):
+				coincidencias+=1
+		return -coincidencias
 class Nodo:
 	def __init__(self,estado,padre =None,accion =None,costo_camino =0):
 		self.estado = estado
@@ -135,39 +143,77 @@ def dfs_arbol(problema):
 		nodo =frontera.pop()
 		if problema.is_goal(nodo.estado):
 			return nodo
-		frontera.expand(nodo.expandir(problema))
+		frontera.extend(nodo.expandir(problema))
 	return None
 
 def dfs_grafo(problema):
-	frontera = [Nodo(problema.inicial)]
-	visitados = ()
+	frontera = [(Nodo(problema.inicial))]
+	visitados = set()
 	while frontera:
 		nodo = frontera.pop()
 		if problema.is_goal(nodo.estado):
 			return nodo
+		visitados.add(frozenset(nodo.estado.items()))
 		for hijo in nodo.expandir(problema):
-			if hijo not in frontera and hijo not in visitados:
-				frontera.extend(hijo)
+			if frozenset(hijo.estado.items()) not in visitados and hijo not in frontera:
+				frontera.extend([hijo])
 	return None
 
 def bfs_grafo(poblema):
 	frontera = deque([Nodo(problema.inicial)])
-	visitados = ()
+	visitados = set()
 	while frontera:
 		nodo = frontera.popleft()
 		if problema.is_goal(nodo.estado):
 			return nodo
+		visitados.add(frozenset(nodo.estado.items()))
 		for hijo in nodo.expandir(problema):
-			if hijo.estado not in frontera and hijo.estado not in visitados:
-				frontera.extend(hijo)
+			if frozenset(hijo.estado.items()) not in visitados and hijo not in frontera:
+				frontera.extend([hijo])
 
+FIFOQueue = deque
+LIFOQueue = list
+error = Nodo('error',costo_camino = math.inf)
+cortado = Nodo('cortado',costo_camino = math.inf)
+
+class ColaDePrioridad:
+	def __init__(self,items = (),llave = lambda x:x):
+		self.llave = llave 
+		self.items = []
+		for item in items:
+			self.add(item)
+	def add(self,item):
+		par = (self.llave(item),item)
+		heapq.heappush(self.items,par)
+	def pop(self):
+		return heapq.heappop(self.items)[1]
+	def top(self):
+		return self.items[0][1]
+	def __len__(self):
+		return len(self.items)
+
+def best_first(problema,  f):
+	nodo = Nodo(problema.inicial) #el primero
+	frontera = ColaDePrioridad([nodo],f) #colocar en la frontera
+	alcanzado = {problema.inicial:nodo} # alcanzado?
+	while frontera :
+		nodo = frontera.pop()
+		if problema.is_goal(nodo.estado): #es final
+			return nodo
+		for hijo in expandir(problema,nodo): #hijo luego de epandir
+			s = hijo.estado #el estado de hijo
+			if s not in alcanzado or hijo.costo_camino < alcanzado[s].costo_camino: # no es alcanzao o hijo.cost< alanzado [s]costo
+				alcanzado[s] = hijo
+				frontera.add(hijo) #añadir
+	return error
 
 if __name__=='__main__':
-	texto_cifrado= "XLMZ"
+	texto_cifrado= "XLMZGR"
 	fragmento_conocido = "HOLA"
 	diccionario= ["DOLAR","MIA","TOLUCA","CIFRA"]
 	problema = Descifrado(texto_cifrado=texto_cifrado,fragmento_conocido=fragmento_conocido,diccionario=diccionario,inicial = {})
-	solucion = bfs_arbol(problema)
+	#cola = ColaDePrioridad()
+	solucion = (problema,problema.h)
 	if solucion:
 		print("solucion:")
 		print("texto descifrado:",problema.aplicar_mapeo(solucion.estado))
