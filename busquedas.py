@@ -3,7 +3,7 @@ from collections import deque;
 import math
 import heapq
 
-#librerias necesariasa
+#clase Problema-------------------------------------------------------------------
 class Problema:
 	def __init__(self,inicial,final=None):
 		self.inicial = inicial
@@ -23,7 +23,7 @@ class Problema:
 		raise NotImplementedError
 	def h(self,nodo):
 		return 0
-
+#Clase Descrifrado----------------------------------------------------------------------------
 class Descifrado(Problema):
 	def __init__(self,texto_cifrado,fragmento_conocido,diccionario,inicial = None):
 		super().__init__(inicial)
@@ -66,6 +66,7 @@ class Descifrado(Problema):
 					coincidencias+=1
 			else:break
 		return coincidencias
+#clase Nodo----------------------------------------------------------------------------
 class Nodo:
 	def __init__(self,estado,padre =None,accion =None,costo_camino =0):
 		self.estado = estado
@@ -79,10 +80,17 @@ class Nodo:
 		return f"<nodo {self.estado}"
 	def __lt__(self,nodo):
 		return self.costo_camino < nodo.costo_camino
-	def expandir(self, problema):
+	def expandir_0(self, problema):
 		lista = []
 		for accion in problema.acciones(self.estado):
 			hijo = self.nodo_hijo(problema,accion)
+			lista.append(hijo)
+		return lista
+	def expandir(self,problema):
+		lista = []
+		for accion in problema.acciones(self.estado):
+			r = problema.resultado(self.estado,accion)
+			hijo = Nodo(r,self,accion,problema.costo_accion(self.costo_camino,self.estado,accion,r))
 			lista.append(hijo)
 		return lista
 	def nodo_hijo(self,problema,accion):
@@ -105,7 +113,7 @@ class Nodo:
 		return isinstance(otro,Nodo) and self.estado == otro.estado
 	def __hash__(self):
 		return hash(self.estado) #n1=Nodo("A") n2=Nodo("A") conjunto=set() conjunto.add(n1) n2 in conjunto ===> true
-
+#metodo IDS para dfs limitado----------------
 def IDS(problema):
 	limite = 0
 	while True:
@@ -128,7 +136,7 @@ def busqueda_profundidad_limitada(nodo,problema,limite):
 
 falla =Nodo('falla',costo_camino = math.inf)
 corte =Nodo('corte',costo_camino =math.inf)
-
+#--------------------------------------------------------------
 def bfs_arbol(problema):
 	frontera = deque([Nodo(problema.inicial)])
 	while frontera:
@@ -136,8 +144,8 @@ def bfs_arbol(problema):
 		if problema.is_goal(nodo.estado):
 			return nodo
 		frontera.extend(nodo.expandir(problema)) #anadir
-	return None
-
+	return falla
+#------------------------------------------------------------
 def dfs_arbol(problema):
 	frontera = [Nodo(problema.inicial)]
 	while frontera:
@@ -145,8 +153,8 @@ def dfs_arbol(problema):
 		if problema.is_goal(nodo.estado):
 			return nodo
 		frontera.extend(nodo.expandir(problema))
-	return None
-
+	return falla
+#----------------------------#comentrios si estado es dict---------------------------------
 def dfs_grafo(problema):
 	frontera = [(Nodo(problema.inicial))]
 	visitados = set()
@@ -154,12 +162,12 @@ def dfs_grafo(problema):
 		nodo = frontera.pop()
 		if problema.is_goal(nodo.estado):
 			return nodo
-		visitados.add(frozenset(nodo.estado.items()))
+		visitados.add(nodo.estado) #visitados.add(frozenset(nodo.estado.items()))
 		for hijo in nodo.expandir(problema):
-			if frozenset(hijo.estado.items()) not in visitados and hijo not in frontera:
+			if hijo.estado not in visitados and hijo not in frontera:
 				frontera.append(hijo)
-	return None
-
+	return falla
+#-------------------------------------------------------------
 def bfs_grafo(poblema):
 	frontera = deque([Nodo(problema.inicial)])
 	visitados = set()
@@ -172,19 +180,19 @@ def bfs_grafo(poblema):
 			if frozenset(hijo.estado.items()) not in visitados and hijo not in frontera:
 				frontera.append(hijo)
 	return falla
-
+#------------------------------------------------------------
 def expandir(problema,nodo):
 	s = nodo.estado
 	for accion in problema.acciones(s):
 		r = problema.resultado(s,accion)
 		costo = nodo.costo_camino+problema.costo_accion(0,s,accion,r)
 		yield Nodo(r,nodo,accion,costo)
-
+#--------------------------------------------------------------
 def acciones_camino(nodo):
 	if nodo.padre ==None:
 		return []
 	return acciones_camino(nodo.padre)+[nodo.accion]
-
+#-------------------------------------------------------------
 def estados_camino(nodo):
 	if nodo in (falla,corte,None):
 		return []
@@ -193,7 +201,7 @@ def estados_camino(nodo):
 FIFOQueue = deque
 LIFOQueu = list
 
-
+#Clase ColaPrioridad-----------------------------------------------------------------
 class ColaPrioridad:
 	def __init__(self,items=(),prioridad=lambda x:x):
 		self.items =[]
@@ -210,7 +218,7 @@ class ColaPrioridad:
 	def __len__(self):
 		return len(self.items)
 
-
+#--------------------------------------------------------
 def primero_mejor(problema, f):
 	nodo = Nodo(problema.inicial)
 	frontera = ColaPrioridad([nodo],f)
@@ -227,7 +235,7 @@ def primero_mejor(problema, f):
 				frontera.agregar(hijo)
 				visitados[s] = hijo
 	return falla
-
+#-----------------------------------------------------------
 def es_ciclo(nodo):
 	ac = nodo.padre
 	while ac is not None:
@@ -235,7 +243,7 @@ def es_ciclo(nodo):
 			return True
 		ac = ac.padre
 	return False
-
+#------------------------------------------------------------
 def primero_mejor_arbol(problema,f):
 	frontera = ColaPrioridad(problema.inicial,f)
 	while frontera:
@@ -246,42 +254,41 @@ def primero_mejor_arbol(problema,f):
 			if not es_ciclo(hijo):
 				frontera.agregar(nodo)
 	return falla
-
+#-----------------------------------------------------------
 def g(nodo):
 	return nodo.costo_camino
-
+#-----------------------------------------------------------
 def a_estrella(problema,h=None):
 	h = h or problema.h
 	return primero_mejor(problema,f=lambda nodo:g(nodo)+h(nodo))
-
+#------------------------------------------------------------
 def a_estrella_arbol(problema):
 	h = h or problema.h
 	return primero_mejor_arbol(problema, f=lambda nodo:g(nodo)+h(nodo))
-
+#----------------------------------------------------------
 def costo_uniforme(problema):
 	return primero_mejor(problema,f = g)
-
-
+#-----------------------------------#los comentarios si los estdos son dict---------------------------
 def bfs_aima(problema):
 	nodo = Nodo(problema.inicial)
 	if problema.is_goal(nodo.estado):
 		return nodo
 	frontera = FIFOQueue([nodo])
-	visitados = {frozenset(problema.inicial.items())}
+	visitados = {problema.inicial} #visitados = {frozenset(problema.inicial.items())}
 	while frontera:
 		nodo = frontera.popleft()
 		if  problema.is_goal(nodo.estado):
 			return nodo
 		for hijo in expandir(problema,nodo):
 			s = hijo.estado
-			s_clave = frozenset(s.items())
+			s_clave = s #s_clave = frozenset(s.items())
 			if problema.is_goal(s):
 				return hijo
-			if s_clave is not visitados:
+			if s_clave not in visitados:
 				visitados.add(s_clave)
 				frontera.append(hijo)
 	return falla
-
+#clase OchoPuzzles----------------------------------------------------------------
 class OchoPuzzles(Problema):
 	def __init__(self,inicial,final=(1,2,3,4,5,6,7,8,0)):
 		self.inicial = inicial 
@@ -321,14 +328,26 @@ class OchoPuzzles(Problema):
 				if (estado[i] > estado[j]) and estado[i]!=0 and estado[j]!=0:
 					intercambios +=1
 		return intercambios%2==0
-	def h(self,nodo):
+	def h_0(self,nodo): #h posicion fuera de posicion en final
 		cuenta = 0
 		estado = nodo.estado
 		for i in range(len(estado)):
 			if estado[i]!=self.final[i]:
 				cuenta +=1
 		return cuenta
-
+	def h(self,nodo): #manhattan
+		estado = nodo.estado
+		distancia = 0
+		for e in range(1,9):
+			ind_e = estado.index(e)
+			fila_e = ind_e//3
+			col_e = ind_e%3
+			ind_f = self.final.index(e)
+			fila_f = ind_f//3
+			col_f = ind_f%3
+			distancia += abs(fila_f -fila_e) + abs(col_f-col_e)
+		return distancia
+#Clase panqueques--------------------------------------------------------------------
 class Panqueques(Problema):
 	def __init__(self,inicial):
 		self.inicial = tuple(inicial)
@@ -349,20 +368,79 @@ class Panqueques(Problema):
 			if (estado[i-1] - estado[i])> 1:
 				cuenta=+1
 		return cuenta
+import random
+#clase laberinto------------------------------------------------------
+class Laberinto(Problema):
+	def __init__(self,inicial,final,m,n):
+		self.inicial = inicial
+		self.final = final
+		self.m = m
+		self.n = n
+		self.mapa = [[random.randint(0,1) for _ in range(n)]for _ in range(m)]
+		self.mapa[inicial[0]][inicial[1]] =0
+		self.mapa[final[0]][final[1]] = 0
+		for i in range(self.m):
+			for j in range(self.n):
+				if self.mapa[i][j] == 1:
+					print('*',end=' ')
+				else:
+					print(' ',end=' ')
+			print('\n')
+		print('\n')
+	def acciones(self,estado):
+		acciones_base = ['ARRIBA','ABAJO','DERECHA','IZQUIERDA']
+		fila,columna = estado  #estado es una [fila,columna]
+		mapa = self.mapa
+		m = self.m
+		n = self.n
+		if fila==0 or mapa[fila-1][columna]==1:
+			acciones_base.remove('ARRIBA')
+		if fila==m-1 or mapa[fila+1][columna]==1:
+			acciones_base.remove('ABAJO')
+		if columna==0 or mapa[fila][columna-1]==1:
+			acciones_base.remove('IZQUIERDA')
+		if columna==n-1 or mapa[fila][columna+1]==1:
+			acciones_base.remove('DERECHA')
+		return acciones_base
+	def resultado(self,estado,accion):
+		nuevo_estado = ()
+		match accion:
+			case 'ARRIBA':nuevo_estado = estado[0]-1,estado[1]
+			case 'ABAJO':nuevo_estado = estado[0]+1,estado[1]
+			case 'DERECHA':nuevo_estado =estado[0],estado[1]+1
+			case 'IZQUIERDA':nuevo_estado = estado[0],estado[1]-1;
+		return nuevo_estado
+	def h(self,nodo): #manhatan
+		estado = nodo.estado
+		distancia = abs(self.final[0]-estado[0])+abs(self.final[1]-estado[1])
+		return distancia
+	def is_goal(self,estado):
+		return estado == self.final
 
+#MAIN
+#----
 if __name__=='__main__':
-	problema = Panqueques((1, 3, 5, 7, 9, 2, 4, 6, 8))
-	print(problema.inicial)
+	#Laberinto
+	"""
+	problema = Laberinto((0,0),(0,5),6,6)
 	resultado = a_estrella(problema)
 	print(resultado)
-	"""OchoPuzzles
+	print(resultado.solucion())"""
+	#panqueques
+	"""problema = Panqueques((1, 3, 5, 7, 9, 2, 4, 6, 8))
+	print(problema.inicial)
+	resultado = a_estrella(problema)
+	print(resultado)"""
+	#OchoPuzzles
+	"""
 	problema = OchoPuzzles((5,7,0,1,4,3,8,2,6),(1,2,3,4,5,6,7,8,0))
 	if problema.es_soluble(problema.inicial):
 		resultado = a_estrella(problema)
 	if resultado!=falla:
-		print(resultado.estado)"""
-	""" #sustitucion monoalfabetica
-	texto_cifrado= "XMZV"
+		print(problema.inicial)
+		print(resultado.estado) """
+	#sustitucion monoalfabetica
+	"""texto_cifrado= "XMZV"
 	fragmento_conocido = "HOLA"
 	diccionario= ["DOLAR","MIA","TOLUCA","CIFRA"]
 	problema = Descifrado(texto_cifrado=texto_cifrado,fragmento_conocido=fragmento_conocido,diccionario=diccionario,inicial = {})
@@ -374,4 +452,4 @@ if __name__=='__main__':
 		print("texto descifrado:",problema.aplicar_mapeo(solucion.estado))
 		print("camino de acciones",solucion.solucion())
 	else:
-		print("no hay solucion")"""
+		print("no hay solucion") """
