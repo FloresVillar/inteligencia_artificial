@@ -178,14 +178,14 @@ def bfs_grafo(poblema):
 		visitados.add(frozenset(nodo.estado.items()))
 		for hijo in nodo.expandir(problema):
 			if frozenset(hijo.estado.items()) not in visitados and hijo not in frontera:
-				frontera.append(hijo)
+	 			frontera.append(hijo)
 	return falla
 #------------------------------------------------------------
 def expandir(problema,nodo):
 	s = nodo.estado
 	for accion in problema.acciones(s):
 		r = problema.resultado(s,accion)
-		costo = nodo.costo_camino+problema.costo_accion(0,s,accion,r)
+		costo =problema.costo_accion(nodo.costo_camino,s,accion,r) #costo = nodo.costo_camino+problema.costo_accion(0,s,accion,r)
 		yield Nodo(r,nodo,accion,costo)
 #--------------------------------------------------------------
 def acciones_camino(nodo):
@@ -347,6 +347,8 @@ class OchoPuzzles(Problema):
 			col_f = ind_f%3
 			distancia += abs(fila_f -fila_e) + abs(col_f-col_e)
 		return distancia
+	def valor(self,nodo):
+		return -self.h(nodo)
 #Clase panqueques--------------------------------------------------------------------
 class Panqueques(Problema):
 	def __init__(self,inicial):
@@ -416,10 +418,121 @@ class Laberinto(Problema):
 		return distancia
 	def is_goal(self,estado):
 		return estado == self.final
+#-----clase mapa--------------------------------------------------------------------
+from collections import defaultdict
+class Mapa:
+	def __init__(self,conexiones,localizaciones,dirigido =False):
+		if not dirigido:
+			copia = dict(conexiones)
+			for (c1,c2),distancia in conexiones.items():
+				copia[(c2,c1)] = distancia	
+		conexiones = copia
+		self.conexiones = conexiones
+		self.vecinos = defaultdict(list)
+		for (c1,c2) in self.conexiones:
+			self.vecinos[c1].append(c2)
+		self.localizaciones = localizaciones or defaultdict(lambda:(0,0))
+#----clase ProblemaMapa--------------------------------------------------------------
+class ProblemaMapa(Problema):
+	def __init__(self,inicial,final,mapa=None):
+		self.inicial = inicial
+		self.final = final
+		self.mapa = mapa or Mapa()
+	def acciones(self,estado):
+		return self.mapa.vecinos[estado] # {estado: ['B','C','etc']}
+	def resultado(self,estado,accion):
+		if accion in self.mapa.vecinos[estado]:
+			return accion
+		else:
+			return estado
+	def costo_accion(self,costo1,estado1,accion,estado2):
+		return costo1 + self.mapa.conexiones[estado1,estado2] #{(a,b):123}
+	def h(self,nodo):
+		locs = self.mapa.localizaciones
+		A = locs[nodo.estado]
+		B = locs[self.final]
+		distancia = (A[0]-B[0])**2 + (A[1]-B[1])**2
+		return distancia**.5
 
+#-----------------------------------------------------------------------
+def hill_climbing(problema):
+	nodo = Nodo(problema.inicial)
+	if problema.is_goal(nodo.estado):
+		return nodo
+	actual_val = problema.h(nodo)
+	while True:
+		vecinos = nodo.expandir(problema)
+		if not vecinos:
+			break
+		mejor_vec = vecinos[0]
+		mejor_val = problema.h(mejor_vec)
+		for vec in vecinos[1:]:
+			val = problema.h(vec)
+			if val < mejor_val:
+				mejor_vec = vec
+				mejor_val = val
+		if mejor_val >= actual_val:
+			break
+		else:
+			nodo = mejor_vec
+			actual_val = mejor_val
+	return nodo
+#-------------------------------------------------
+def hill_climbing_aima(problema):
+	actual = Nodo(problema.inicial)
+	while True:
+		vecinos = actual.expandir(problema)
+		if not vecinos:
+			break
+		vecino = vecmax_random_tie(vecinos,key =lambda nodo:-problema.h(nodo))
+		if problema.h(vecino) >= problema.h(actual):
+			break
+		actual = vecino
+	return actual
+def vecmax_random_tie(vecinos,key=None):
+	nodo = max(vecinos,key = key)
+	mejor = [item for item in vecinos if key(item)==key(nodo)]
+	return random.choice(mejor)
+
+
+#-----------------------------------------------
+import numpy as np
+def enfriamiento_simulado(problema, estrategia):
+	nodo = Nodo(problema.inicial)
+	for t in range(sys.maxsize):
+		T = estrategia(t)
+		if T==0:
+			return nodo
+		vecinos = nodo.expandir(problema)
+		if not vecinos:
+			return nodo
+		vec = random.choice(vecinos)
+		delta = problema.valor(vec)-problema.valor(nodo)
+		if delta > 0 or random.random() < np.exp(delta/T):
+			nodo = vec
+
+def estrategia(k=20,lam = 0.05,lim = 100):
+	return lambda t:(k*np.exp(-lam*t) if  t<lim else 0)
 #MAIN
 #----
 if __name__=='__main__':
+	#hill_climbing
+	
+	problema = OchoPuzzles((5,7,0,1,4,3,8,2,6),(1,2,3,4,5,6,7,8,0))
+	if problema.es_soluble(problema.inicial):
+                resultado = enfriamiento_simulado(problema,estrategia())
+	if resultado!=falla:
+				print(problema.final)
+				print(problema.inicial)
+				print(resultado.estado)
+	
+	#problema mapa
+	"""
+	romania = Mapa({('O', 'Z'):  71, ('O', 'S'): 151, ('A', 'Z'): 75, ('A', 'S'): 140, ('A', 'T'): 118,('L', 'T'): 111, ('L', 'M'):  70, ('D', 'M'): 75, ('C', 'D'): 120, ('C', 'R'): 146,('C', 'P'): 138, ('R', 'S'):  80, ('F', 'S'): 99, ('B', 'F'): 211, ('B', 'P'): 101,('B', 'G'):  90, ('B', 'U'):  85, ('H', 'U'): 98, ('E', 'H'):  86, ('U', 'V'): 142,('I', 'V'):  92, ('I', 'N'):  87, ('P', 'R'): 97},{'A': ( 76, 497), 'B': (400, 327), 'C': (246, 285), 'D': (160, 296), 'E': (558, 294),'F': (285, 460), 'G': (368, 257), 'H': (548, 355), 'I': (488, 535), 'L': (162, 379),'M': (160, 343), 'N': (407, 561), 'O': (117, 580), 'P': (311, 372), 'R': (227, 412),'S': (187, 463), 'T': ( 83, 414), 'U': (471, 363), 'V': (535, 473), 'Z': (92, 539)})
+	problema  = ProblemaMapa('A','B',mapa=romania)
+	resultado = a_estrella(problema)
+	print(resultado)
+	print(resultado.solucion())"""
 	#Laberinto
 	"""
 	problema = Laberinto((0,0),(0,5),6,6)
@@ -431,7 +544,7 @@ if __name__=='__main__':
 	print(problema.inicial)
 	resultado = a_estrella(problema)
 	print(resultado)"""
-	#OchoPuzzles
+	#ochopuzzles
 	"""
 	problema = OchoPuzzles((5,7,0,1,4,3,8,2,6),(1,2,3,4,5,6,7,8,0))
 	if problema.es_soluble(problema.inicial):
