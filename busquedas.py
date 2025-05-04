@@ -513,11 +513,108 @@ def enfriamiento_simulado(problema, estrategia):
 
 def estrategia(k=20,lam = 0.05,lim = 100):
 	return lambda t:(k*np.exp(-lam*t) if  t<lim else 0)
+#---------------------------------------------------
+class ProblemaTSP(Problema):
+	def __init__(self,ciudades,distancias):
+		self.ciudades = ciudades
+		self.distancias = distancias
+		ruta_inicial =list(ciudades)
+		random.shuffle(ruta_inicial)
+		super().__init__(inicial = ruta_inicial)
+	def acciones(self,estado):
+		for i in range(len(estado)):
+			for j in range(i+1,len(estado)):
+				yield (i,j)
+	def resultado(self,estado,accion): #intercambiar
+		i, j = accion
+		nueva = estado[:]
+		nueva[i],nueva[j] = nueva[j],nueva[i]
+		return nueva
+	def valor(self,nodo):
+		estado = nodo.estado
+		total = 0
+		for i in range(len(estado)):
+			A = estado[i]
+			B = estado[(i+1)%len(estado)]
+			total +=(distancias[A,B])
+		return -total
+#------------clase Nreinas
+class ProblemaNReinas(Problema):
+	def __init__(self,N):
+		super().__init__(tuple([-1]*N)) #tuplas N con -1's
+		self.N=N
+	def acciones(self,estado):
+		if estado[-1]!=-1:
+			return [] #la ultima columna ya asignado
+		else:
+			col = estado.index(-1)
+			acc = []
+			for fila in range(self.N):
+				if not self.conflictos(estado,fila,col):
+					acc.append(fila)
+			return acc
+	def conflictos(self,estado,fila,col):
+		for c in range(col):
+			if  (fila == estado[c] or col == c or fila-col == estado[c]-c or fila + col == estado[c]+c):
+				return True
+		return False
+	def resultado(self,estado,accion):
+		col = estado.index(-1)
+		nuevo = list(estado[:])
+		nuevo[col] = accion
+		return tuple(nuevo)
+	def is_goal(self,estado):
+		if estado[-1]==-1:
+			return False
+		for col in range(len(estado)):
+			if self.conflictos(estado,estado[col],col):
+				return False
+		return True
+	def h(self,nodo):
+		n_conflictos = 0
+		estado = nodo.estado
+		n =len(estado)
+		for c1 in range(n):
+			f1 = estado[c1]
+			if f1 == -1:
+				continue
+			for c2 in range(c1+1,n):
+				f2 = estado[c2]
+				if f2 == -1:
+					continue
+				conflict=(f1==f2 or abs(f1-f2) ==  abs(c1-c2)) #conflict = (f1==f2 or c1==c2 or f1-c1==f2-c2 or f1+c1==f2+c2)
+				n_conflictos+=conflict
+		return n_conflictos
+#------------algoritmo genetico-------------------------------------------------------------
+def iniciar_poblacion(n,genes,lon):
+	g = len(genes)
+	poblacion = []
+	for i in range(n):
+		cromosoma = []
+		for j in range(lon):
+			ind = random.randrange(0,g)
+			cromosoma.append(genes[ind])
+		poblacion.append(cromosoma)
+	return poblacion
+
+
 #MAIN
 #----
 if __name__=='__main__':
+	problema=ProblemaNReinas(8)
+	resultado =dfs_grafo(problema)
+	print(resultado.estado)
+	print(resultado.solucion())
+	#problema TSP
+	"""
+	ciudades = ['A', 'B', 'C', 'D']
+	distancias = {('A', 'B'): 10, ('B', 'A'): 10,('A', 'C'): 15, ('C', 'A'): 15,('A', 'D'): 20, ('D', 'A'): 20,('B', 'C'): 35, ('C', 'B'): 35,('B', 'D'): 25, ('D', 'B'): 25,('C', 'D'): 30, ('D', 'C'): 30}
+	problema = ProblemaTSP(ciudades,distancias)
+	resultado = enfriamiento_simulado(problema,estrategia())
+	print(resultado.estado)
+	print(resultado.solucion())"""
 	#hill_climbing
-	
+	"""
 	problema = OchoPuzzles((5,7,0,1,4,3,8,2,6),(1,2,3,4,5,6,7,8,0))
 	if problema.es_soluble(problema.inicial):
                 resultado = enfriamiento_simulado(problema,estrategia())
@@ -525,7 +622,7 @@ if __name__=='__main__':
 				print(problema.final)
 				print(problema.inicial)
 				print(resultado.estado)
-	
+	"""
 	#problema mapa
 	"""
 	romania = Mapa({('O', 'Z'):  71, ('O', 'S'): 151, ('A', 'Z'): 75, ('A', 'S'): 140, ('A', 'T'): 118,('L', 'T'): 111, ('L', 'M'):  70, ('D', 'M'): 75, ('C', 'D'): 120, ('C', 'R'): 146,('C', 'P'): 138, ('R', 'S'):  80, ('F', 'S'): 99, ('B', 'F'): 211, ('B', 'P'): 101,('B', 'G'):  90, ('B', 'U'):  85, ('H', 'U'): 98, ('E', 'H'):  86, ('U', 'V'): 142,('I', 'V'):  92, ('I', 'N'):  87, ('P', 'R'): 97},{'A': ( 76, 497), 'B': (400, 327), 'C': (246, 285), 'D': (160, 296), 'E': (558, 294),'F': (285, 460), 'G': (368, 257), 'H': (548, 355), 'I': (488, 535), 'L': (162, 379),'M': (160, 343), 'N': (407, 561), 'O': (117, 580), 'P': (311, 372), 'R': (227, 412),'S': (187, 463), 'T': ( 83, 414), 'U': (471, 363), 'V': (535, 473), 'Z': (92, 539)})
