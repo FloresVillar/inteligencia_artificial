@@ -585,6 +585,10 @@ class ProblemaNReinas(Problema):
 				conflict=(f1==f2 or abs(f1-f2) ==  abs(c1-c2)) #conflict = (f1==f2 or c1==c2 or f1-c1==f2-c2 or f1+c1==f2+c2)
 				n_conflictos+=conflict
 		return n_conflictos
+	def fitness(self,estado):
+		nodo = Nodo(estado)
+		fit = 1/(1+self.h(nodo))
+		return fit
 #------------algoritmo genetico-------------------------------------------------------------
 def iniciar_poblacion(n,genes,lon):
 	g = len(genes)
@@ -597,14 +601,79 @@ def iniciar_poblacion(n,genes,lon):
 		poblacion.append(cromosoma)
 	return poblacion
 
+def busqueda_genetica(problema,genes,lon,proba=0.1,generaciones=1000,f_umbral=1.0,n=20):
+	poblacion = iniciar_poblacion(n,genes,lon)
+	random.shuffle(poblacion)
+	resultado =algoritmo_genetico(poblacion,problema.fitness,genes,generaciones,proba,f_umbral)
+	return resultado
 
+def algoritmo_genetico(poblacion,fitness,genes,generaciones,proba,f_umbral):
+	for i in range(generaciones):
+		nueva = []
+		for j in range(len(poblacion)):
+			padres = elegir(2,poblacion,fitness)
+			hijo = cruzar(padres[0],padres[1])
+			hijo_mutado = mutar(hijo,genes,proba)
+			nueva.append(hijo_mutado)
+		poblacion = nueva
+		mejor_cromosoma = cromosoma_umbral(fitness,f_umbral,poblacion)
+		if mejor_cromosoma:
+			return mejor_cromosoma
+	return max(poblacion,key= fitness)
+def cromosoma_umbral(fitness,f_umbral,poblacion):
+	if not f_umbral:
+		return None
+	cromo_candidata = max(poblacion,key = fitness)
+	if fitness(cromo_candidata) >= f_umbral:
+		return cromo_candidata
+	return None
+def muestreador_ponderado(poblacion,fitnesses):
+	fitenesses= list(fitnesses)
+	total = sum(fitnesses)
+	probas = []
+	for fit in fitnesses:
+		if fit==0:
+			probas.append(0)
+		else:
+			probas.append(fit/total)
+	def muestreador():
+		r = random.random()
+		suma = 0
+		for i in range(len(poblacion)):
+			suma+=probas[i]
+			if r <=suma:
+				return poblacion[i]
+		return poblacion[-1]
+	return muestreador
+
+def elegir(r, poblacion, fitness):
+	fitnesses = []
+	for individuo in poblacion:
+		fitnesses.append(fitness(individuo))
+	muestreador = muestreador_ponderado(poblacion,fitnesses)
+	escogidos= []
+	for i in range(r):
+		escogidos.append(muestreador())
+	return escogidos
+def cruzar(x,y):
+	n = len(x)
+	c = random.randrange(0,n)
+	return x[:c]+y[c:]
+def mutar(x,genes,proba):
+	if random.uniform(0,1) >=proba:
+		return x
+	n = len(x) #8reinas 8
+	g = len(genes) #1,2,3
+	c = random.randrange(0,n)
+	r = random.randrange(0,g) #para el gen
+	nuevo_gen = genes[r]
+	return x[:c] + [nuevo_gen] + x[c+1:]
 #MAIN
 #----
 if __name__=='__main__':
 	problema=ProblemaNReinas(8)
-	resultado =dfs_grafo(problema)
-	print(resultado.estado)
-	print(resultado.solucion())
+	resultado =busqueda_genetica(problema,[0,1,2,3,4,5,6,7,8],8)
+	print(resultado)
 	#problema TSP
 	"""
 	ciudades = ['A', 'B', 'C', 'D']
